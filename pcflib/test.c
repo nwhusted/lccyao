@@ -25,6 +25,9 @@ void delete_key(void* k)
     free(k);
 }
 
+uint32_t xor_count = 0;
+uint32_t tt_count = 0;
+
 uint32_t i_key = 0;
 
 void * m_callback(struct PCFState * st, struct PCFGate * gate)
@@ -35,11 +38,16 @@ void * m_callback(struct PCFState * st, struct PCFGate * gate)
       int8_t i = 0;
       uint8_t tab = gate->truth_table;
       uint32_t wire1val, wire2val;
+      if(tab == 6)
+        xor_count++;
+      else
+        tt_count++;
       for(i = 0; i < 4; i++)
         {
           bits[i] = tab & 0x01;
           tab = tab >> 1;
         }
+
 
       /* if(st->wires[gate->wire1].flags == KNOWN_WIRE) */
       /*   wire1val = st->wires[gate->wire1].value; */
@@ -58,7 +66,12 @@ void * m_callback(struct PCFState * st, struct PCFGate * gate)
       assert(wire2val < 2);
 
       i_key = bits[wire1val + 2*wire2val];
-
+/*
+      printf("----------\n");
+      printf("Gate Type: %02X\n", gate->truth_table);
+      printf("%d, %d = %d\n", wire1val, wire2val,wire1val + 2 * wire2val);
+      printf("----------\n");
+*/
       return &i_key;
     }
   else if(gate->tag == TAG_INPUT_A)
@@ -186,12 +199,14 @@ int main(int argc, char**argv)
   st = load_pcf_file(argv[1], &key0, &key1, copy_key);
   st->delete_key = delete_key;
   st->callback = m_callback;
-  setup_alice_inputs_from_hex_string(st, "00000000000000000000000000");//"5FC83262147D140DE3DE952304"); //"AC000000");
-  setup_bob_inputs_from_string(st, "TS--ROCKYBEACH");  //"DDFDC090F019861BC5E8D37562"); //"(S//NF)abcdef");
+  setup_alice_inputs_from_hex_string(st, "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");//"5FC83262147D140DE3DE952304"); //"AC000000");
+  setup_bob_inputs_from_hex_string(st, "00000000000000000000000000000000");  //"DDFDC090F019861BC5E8D37562"); //"(S//NF)abcdef");
 
   g = get_next_gate(st);
   while(g != 0)
     g = get_next_gate(st);
 
+  printf("Total XOR: %u\n", xor_count);
+  printf("Total TT: %u\n", tt_count);
   return 0;
 }
